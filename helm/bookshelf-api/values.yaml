@@ -2,7 +2,7 @@
 # Default values for bookshelf-api
 # =============================================================================
 
-replicaCount: 2
+replicaCount: 3
 
 image:
   repository: chandubodduluri/bookshelf-api
