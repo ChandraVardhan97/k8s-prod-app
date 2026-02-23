@@ -24,8 +24,9 @@ By the end of this guide, you will have:
 9. [Deep Dive: How Helm Works](#9-deep-dive-how-helm-works)
 10. [Deep Dive: How ArgoCD Works](#10-deep-dive-how-argocd-works)
 11. [Deploying a Different Application](#11-deploying-a-different-application)
-12. [Troubleshooting Guide](#12-troubleshooting-guide)
-13. [Glossary](#13-glossary)
+12. [Stopping and Restarting the Cluster](#12-stopping-and-restarting-the-cluster)
+13. [Troubleshooting Guide](#13-troubleshooting-guide)
+14. [Glossary](#14-glossary)
 
 ---
 
@@ -1239,7 +1240,72 @@ Create a ConfigMap with `grafana_dashboard: "1"` label and your dashboard JSON. 
 
 ---
 
-## 12. Troubleshooting Guide
+## 12. Stopping and Restarting the Cluster
+
+Running a full Kind cluster with ArgoCD, Prometheus, and Grafana consumes significant memory. Here's how to stop everything to free up resources and restart later.
+
+### 12.1 Option A: Stop the Entire Cluster (Recommended)
+
+Since Kind runs each node as a Docker container, you can stop/start the entire cluster at the Docker level:
+
+**Stop** — frees all memory immediately:
+```powershell
+docker stop learning-cluster-control-plane learning-cluster-worker learning-cluster-worker2 learning-cluster-worker3
+```
+
+**Restart** — all pods, deployments, and services come back automatically:
+```powershell
+docker start learning-cluster-control-plane learning-cluster-worker learning-cluster-worker2 learning-cluster-worker3
+```
+
+Kubernetes stores its desired state in **etcd** (on the control-plane node). When the nodes restart, the kubelet on each node reads the desired state and restarts all pods. This typically takes 1–2 minutes.
+
+> **Tip:** After restarting, you'll need to re-run any `kubectl port-forward` commands since those are local processes that don't survive a restart.
+
+### 12.2 Option B: Stop Only the Application (Keep Cluster Running)
+
+If you want to keep ArgoCD, Prometheus, and Grafana running but stop the bookshelf-api pods:
+
+> **Important:** ArgoCD has `selfHeal: true`, which means it will automatically revert any manual changes (including scaling to zero). You must disable auto-sync first.
+
+```powershell
+# 1. Disable auto-sync (prevents ArgoCD from reverting your change)
+kubectl patch application bookshelf-api -n argocd --type merge -p '{"spec":{"syncPolicy":null}}'
+
+# 2. Scale the deployment to zero pods
+kubectl scale deployment bookshelf-api-bookshelf-api -n bookshelf --replicas=0
+```
+
+**When you want to bring it back:**
+```powershell
+# 3. Scale back up
+kubectl scale deployment bookshelf-api-bookshelf-api -n bookshelf --replicas=2
+
+# 4. Re-enable ArgoCD auto-sync
+kubectl patch application bookshelf-api -n argocd --type merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true},"syncOptions":["CreateNamespace=true"]}}}'
+```
+
+### 12.3 Why Self-Heal Matters Here
+
+```
+Without disabling auto-sync:
+
+  You run:    kubectl scale deployment ... --replicas=0
+  ArgoCD:     "Hey, Git says replicas=2 but cluster has 0. Let me fix that."
+  Result:     ArgoCD scales it back to 2 within seconds.
+
+With auto-sync disabled:
+
+  You run:    kubectl scale deployment ... --replicas=0
+  ArgoCD:     (not watching for drift)
+  Result:     Pods stop and stay stopped until you bring them back.
+```
+
+This is a core GitOps principle — the cluster state should only change through Git. Manual changes are treated as "drift" and are automatically corrected. Disabling auto-sync is the escape hatch for temporary manual control.
+
+---
+
+## 13. Troubleshooting Guide
 
 ### Common Issues and Fixes
 
@@ -1282,7 +1348,7 @@ helm template bookshelf-api ./helm/bookshelf-api
 
 ---
 
-## 13. Glossary
+## 14. Glossary
 
 | Term | Definition |
 |------|-----------|
