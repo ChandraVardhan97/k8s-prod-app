@@ -64,7 +64,7 @@ readinessProbe:
 # -- Horizontal Pod Autoscaler
 autoscaling:
   enabled: true
-  minReplicas: 2
+  minReplicas: 3
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
 
