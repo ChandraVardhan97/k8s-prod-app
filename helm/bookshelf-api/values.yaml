@@ -1,0 +1,98 @@
+# =============================================================================
+# Default values for bookshelf-api
+# =============================================================================
+
+replicaCount: 2
+
+image:
+  repository: chandubodduluri/bookshelf-api
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# -- Service Account
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# -- Service
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# -- Ingress (Kind-compatible with NGINX ingress)
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: bookshelf.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# -- Resource limits & requests
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# -- Health Probes
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# -- Environment variables
+env:
+  LOG_LEVEL: INFO
+  DATABASE_URL: "sqlite:///./bookshelf.db"
+
+# -- Pod labels (added to all pods)
+podLabels:
+  app: bookshelf-api
+
+# -- Prometheus ServiceMonitor
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  path: /metrics
+  labels:
+    release: prometheus   # must match the kube-prometheus-stack release name
+
+# -- Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# -- Node selector, tolerations, affinity
+nodeSelector: {}
+tolerations: []
+affinity: {}

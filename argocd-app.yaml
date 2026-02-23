@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bookshelf-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ChandraVardhan97/k8s-prod-app.git
+    targetRevision: main
+    path: helm/bookshelf-api
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bookshelf
+  syncPolicy:
+    automated:
+      prune: true        # delete resources removed from Git
+      selfHeal: true      # revert manual in-cluster changes
+    syncOptions:
+      - CreateNamespace=true

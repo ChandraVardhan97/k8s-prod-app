@@ -1,0 +1,18 @@
+Bookshelf API has been deployed!
+
+Get the application URL:
+{{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+  http://{{ .host }}
+  {{- end }}
+
+  TIP: Add "127.0.0.1 bookshelf.local" to your C:\Windows\System32\drivers\etc\hosts file
+{{- else }}
+  kubectl port-forward svc/{{ include "bookshelf-api.fullname" . }} 8000:{{ .Values.service.port }} -n {{ .Release.Namespace }}
+  Then visit: http://localhost:8000
+{{- end }}
+
+Useful links:
+  - Swagger UI: /docs
+  - Health:     /healthz
+  - Metrics:    /metrics
