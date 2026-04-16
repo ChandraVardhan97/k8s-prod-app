@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/ChandraVardhan97/k8s-prod-app.git
+    repoURL: https://github.com/ChandraVardhan97/local-k8s-prod-stack.git
     targetRevision: main
     path: helm/bookshelf-api
     helm:
